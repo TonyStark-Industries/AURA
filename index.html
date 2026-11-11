@@ -117,17 +117,43 @@ h1{text-shadow:0 0 14px rgba(57,255,20,.45)}
 @keyframes pop{0%{transform:scale(.6);opacity:0}15%{transform:scale(1.08);opacity:1}25%{transform:scale(1)}85%{opacity:1}100%{opacity:0}}
 @keyframes burst{0%{transform:translate(0,0) rotate(0);opacity:1}100%{transform:translate(var(--dx),var(--dy)) rotate(360deg);opacity:0}}
 @media (prefers-reduced-motion:reduce){.fiesta .p{display:none}.fiesta .box{animation:none}}
+.welcome{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:20px}
+.welcome[hidden]{display:none}
+.wbox{width:100%;max-width:380px;text-align:center;border:2px solid var(--accent);border-radius:18px;padding:28px 22px;background:var(--surface);box-shadow:0 0 30px rgba(57,255,20,.35)}
+.wbox h2{margin:0 0 6px;font-size:2rem;color:var(--accent);text-shadow:0 0 14px rgba(57,255,20,.6)}
+.wbox p{margin:0 0 16px;color:var(--muted)}
+.wbox input{width:100%;font:inherit;font-size:1.1rem;padding:12px;border:1px solid var(--accent);border-radius:10px;background:var(--bg);color:var(--ink);text-align:center;margin-bottom:12px}
+.wbox button{width:100%;background:var(--accent);color:var(--accent-ink);border:0;border-radius:10px;padding:12px;font:inherit;font-weight:700;cursor:pointer;box-shadow:0 0 10px rgba(57,255,20,.45)}
+.fiesta .box h3{overflow-wrap:anywhere}
+.add{margin-bottom:20px}
+.hab{margin:6px 0 10px;padding:8px 12px;border:1px dashed var(--line);border-radius:10px}
+.hab[hidden]{display:none}
+.qh{position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.7);padding:20px}
+.qhbox{width:100%;max-width:380px;border:2px solid var(--accent);border-radius:16px;background:var(--surface);padding:20px;box-shadow:0 0 30px rgba(57,255,20,.35);display:flex;flex-direction:column;gap:8px}
+.qhbox h3{margin:0;color:var(--accent);overflow-wrap:anywhere}
+.qhbox p{margin:0 0 6px;color:var(--muted)}
+.qhbox .ghost{text-align:center;padding:10px 12px}
+.fiesta .gato{display:block;max-width:min(240px,60vw);max-height:200px;margin:0 auto 12px;border-radius:12px;border:2px solid var(--accent)}
+@media (prefers-reduced-motion:reduce){.fiesta .gato{display:none}}
 @media (prefers-reduced-motion:reduce){.bar b{transition:none}}
 </style>
 </head>
 <body>
+<div class="welcome" id="bienvenida" hidden>
+  <div class="wbox">
+    <h2>Bienvenido</h2>
+    <p>¿Cuál es tu nombre?</p>
+    <input id="nombre" type="text" maxlength="30" placeholder="Escribe tu nombre" aria-label="Tu nombre" autocomplete="given-name">
+    <button id="entrar">Entrar</button>
+  </div>
+</div>
 <div class="wrap">
   <header>
     <div>
-      <h1>Mis pendientes</h1>
+      <h1 id="saludo">Mis pendientes</h1>
       <p class="sub" id="resumen"></p>
     </div>
-    <button class="ghost" id="hoy">Ir a hoy</button>
+    <div class="head-btns"><button class="ghost" id="nombre-btn">Cambiar nombre</button><button class="ghost" id="hoy">Ir a hoy</button></div>
   </header>
 
   <div class="grid">
@@ -160,7 +186,7 @@ h1{text-shadow:0 0 14px rgba(57,255,20,.45)}
         <input id="nueva" type="text" maxlength="120" list="sug" placeholder="Agrega algo para este día" aria-label="Nueva tarea">
         <datalist id="sug"><option value="Ir al gym"><option value="Tomar 2 litros de agua"><option value="Dormir 8 horas"><option value="Caminar 30 minutos"><option value="Leer 10 minutos"><option value="Meditar"><option value="Estudiar 1 hora"><option value="Lavar trastes"><option value="Hacer la cama"></datalist>
         <button id="agregar">Agregar</button>
-        <label class="hab"><input type="checkbox" id="hab"> Modo hábito: repetir cada día hasta fin de mes</label>
+        <label class="hab" id="habl" hidden><input type="checkbox" id="hab"> Modo hábito: repetir cada día hasta fin de mes</label>
       </div>
       <ul id="lista"></ul>
       <div class="foot">
@@ -178,21 +204,20 @@ h1{text-shadow:0 0 14px rgba(57,255,20,.45)}
   function save(){ try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {} }
 
   var KEY2 = 'pendientes-extra-v1';
-  var extra = { adult: false, racha: {}, habitos: [] };
-  try { var r2 = localStorage.getItem(KEY2); if (r2) { var p2 = JSON.parse(r2); if (p2) { extra.adult = !!p2.adult; extra.racha = p2.racha || {}; extra.habitos = p2.habitos || []; } } } catch (e) {}
+  var extra = { adult: false, racha: {}, habitos: [], nombre: '' };
+  try { var r2 = localStorage.getItem(KEY2); if (r2) { var p2 = JSON.parse(r2); if (p2) { extra.adult = !!p2.adult; extra.racha = p2.racha || {}; extra.habitos = p2.habitos || []; extra.nombre = typeof p2.nombre === 'string' ? p2.nombre : ''; } } } catch (e) {}
   function saveX(){ try { localStorage.setItem(KEY2, JSON.stringify(extra)); } catch (e) {} }
 
   var CATS = [
     { id: 'personal', n: 'Personal', c: '#8a63d2' },
     { id: 'gym', n: 'Gym', c: '#e0702f' },
     { id: 'estudio', n: 'Estudio', c: '#2a8cc4' },
-    { id: 'casa', n: 'Casa', c: '#a8962a' },
-    { id: 'r18', n: 'No fap', c: '#c23b75', adult: true }
+    { id: 'casa', n: 'Casa', c: '#a8962a' }
   ];
   var filtro = 'todas';
-  function catsOn(){ return CATS.filter(function(c){ return !c.adult || extra.adult; }); }
+  function catsOn(){ return CATS; }
   function catOf(t){ return CATS.filter(function(c){ return c.id === (t.c || 'personal'); })[0] || CATS[0]; }
-  function vis(t){ return !catOf(t).adult || extra.adult; }
+  function vis(t){ return t.c !== 'r18'; }
   function dot(color){ var i = document.createElement('i'); i.style.background = color; return i; }
 
   function renderFiltros(){
@@ -208,12 +233,6 @@ h1{text-shadow:0 0 14px rgba(57,255,20,.45)}
       b.addEventListener('click', function(){ filtro = c.id; render(); });
       box.appendChild(b);
     });
-    var mini = document.createElement('button');
-    mini.className = 'chip mini';
-    mini.textContent = extra.adult ? '−' : '+';
-    mini.setAttribute('aria-label', extra.adult ? 'Ocultar categoría extra' : 'Mostrar categoría extra');
-    mini.addEventListener('click', function(){ extra.adult = !extra.adult; saveX(); render(); });
-    box.appendChild(mini);
     var s2 = $('cat'); var cur = s2.value; s2.textContent = '';
     on.forEach(function(c){ var o = document.createElement('option'); o.value = c.id; o.textContent = c.n; s2.appendChild(o); });
     var want = filtro !== 'todas' ? filtro : cur;
@@ -248,6 +267,9 @@ h1{text-shadow:0 0 14px rgba(57,255,20,.45)}
     box.appendChild(big); box.appendChild(p); box.appendChild(row);
   }
 
+  var GATO = 'https://i.pinimg.com/originals/a9/fb/d4/a9fbd437bf2255bf60b6bff1fabf4bed.gif';
+  try { ['gatito.gif', GATO].forEach(function(u){ var pre = new Image(); pre.referrerPolicy = 'no-referrer'; pre.src = u; }); } catch (e) {}
+
   function celebrate(){
     var old = document.querySelector('.fiesta'); if (old) old.remove();
     var f = document.createElement('div'); f.className = 'fiesta'; f.setAttribute('role', 'status');
@@ -262,9 +284,11 @@ h1{text-shadow:0 0 14px rgba(57,255,20,.45)}
       f.appendChild(p);
     }
     var box = document.createElement('div'); box.className = 'box';
-    var h = document.createElement('h3'); h.textContent = '¡Felicidades!';
+    var h = document.createElement('h3'); h.textContent = '¡Felicidades' + (extra.nombre ? ', ' + extra.nombre : '') + '!';
     var q = document.createElement('p'); q.textContent = 'Completaste todo el día.';
-    box.appendChild(h); box.appendChild(q); f.appendChild(box);
+    var img = document.createElement('img'); img.className = 'gato'; img.alt = 'Gatito celebrando'; img.referrerPolicy = 'no-referrer'; var intento = 0; img.src = 'gatito.gif';
+    img.addEventListener('error', function(){ if (intento++ === 0) img.src = GATO; else img.remove(); });
+    box.appendChild(img); box.appendChild(h); box.appendChild(q); f.appendChild(box);
     document.body.appendChild(f);
     setTimeout(function(){ f.remove(); }, 2000);
   }
@@ -309,7 +333,59 @@ h1{text-shadow:0 0 14px rgba(57,255,20,.45)}
     box.appendChild(p); box.appendChild(row);
   }
 
+  function quitar(t, modo){
+    if (modo !== 'dia') extra.habitos = extra.habitos.filter(function(h){ return h.id !== t.h; });
+    Object.keys(data).forEach(function(k){
+      var aplica = modo === 'dia' ? k === sel : (modo === 'sigue' ? k >= sel : true);
+      if (!aplica) return;
+      data[k] = (data[k] || []).filter(function(x){ return modo === 'dia' ? x.id !== t.id : x.h !== t.h; });
+      if (!data[k].length) delete data[k];
+    });
+    saveX(); save(); render();
+  }
+
+  function preguntarQuitar(t){
+    var old = document.querySelector('.qh'); if (old) old.remove();
+    var ov = document.createElement('div'); ov.className = 'qh';
+    ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', 'Quitar hábito');
+    var box = document.createElement('div'); box.className = 'qhbox';
+    var h = document.createElement('h3'); h.textContent = '¿Quitar “' + t.t + '”?';
+    var p = document.createElement('p'); p.textContent = 'Es un hábito que se repite varios días. Elige qué quitar:';
+    box.appendChild(h); box.appendChild(p);
+    function opcion(txt, fn){
+      var b = document.createElement('button'); b.className = 'ghost'; b.textContent = txt;
+      b.addEventListener('click', function(){ ov.remove(); fn(); });
+      box.appendChild(b);
+    }
+    opcion('Solo este día', function(){ quitar(t, 'dia'); });
+    opcion('Este día y los que siguen', function(){ quitar(t, 'sigue'); });
+    opcion('Todo el hábito (también días anteriores)', function(){ quitar(t, 'todo'); });
+    opcion('Cancelar', function(){});
+    ov.appendChild(box);
+    ov.addEventListener('click', function(e){ if (e.target === ov) ov.remove(); });
+    document.body.appendChild(ov);
+  }
+
+  function setNombreUI(){
+    var n = extra.nombre;
+    $('saludo').textContent = n ? 'Hola, ' + n : 'Mis pendientes';
+    $('bienvenida').hidden = !!n;
+  }
+
   function initExtra(){
+    function entrar(){
+      var v = $('nombre').value.trim();
+      if (!v){ $('nombre').focus(); return; }
+      extra.nombre = v; saveX(); setNombreUI();
+    }
+    $('entrar').addEventListener('click', entrar);
+    $('nueva').addEventListener('input', function(){ $('habl').hidden = !this.value.trim(); });
+    $('nombre').addEventListener('keydown', function(e){ if (e.key === 'Enter') entrar(); });
+    $('nombre-btn').addEventListener('click', function(){
+      $('nombre').value = extra.nombre; $('bienvenida').hidden = false; $('nombre').focus();
+    });
+    setNombreUI();
+    if (!extra.nombre) $('nombre').focus();
     
   }
 
@@ -391,6 +467,7 @@ h1{text-shadow:0 0 14px rgba(57,255,20,.45)}
       tg.appendChild(dot(cc.c)); tg.appendChild(document.createTextNode(cc.n + (t.h ? ' ↻' : ''))); lab.appendChild(tg);
       var del = document.createElement('button'); del.className = 'del'; del.textContent = '✕'; del.setAttribute('aria-label', 'Eliminar: ' + t.t);
       del.addEventListener('click', function(){
+        if (t.h){ preguntarQuitar(t); return; }
         data[sel] = (data[sel] || []).filter(function(x){ return x.id !== t.id; });
         if (!data[sel].length) delete data[sel];
         save(); render();
@@ -405,7 +482,7 @@ h1{text-shadow:0 0 14px rgba(57,255,20,.45)}
           });
           saveX(); save(); render();
         });
-        li.appendChild(lab); li.appendChild(hq); li.appendChild(del);
+        li.appendChild(lab); li.appendChild(del);
       } else { li.appendChild(lab); li.appendChild(del); }
       ul.appendChild(li);
     });
@@ -419,7 +496,7 @@ h1{text-shadow:0 0 14px rgba(57,255,20,.45)}
       : 'No tienes nada anotado para hoy.';
   }
 
-  function render(){ renderFiltros(); renderCal(); renderList(); renderReto(); renderResumen(); }
+  function render(){ renderFiltros(); renderCal(); renderList(); renderResumen(); }
 
   function addTask(){
     var inp = $('nueva'); var v = inp.value.trim();
@@ -433,7 +510,7 @@ h1{text-shadow:0 0 14px rgba(57,255,20,.45)}
     } else {
       (data[sel] = data[sel] || []).push({ id: Date.now() + Math.random().toString(36).slice(2,6), t: v, d: false, c: cat });
     }
-    inp.value = ''; save(); render(); inp.focus();
+    inp.value = ''; $('habl').hidden = true; save(); render(); inp.focus();
   }
 
   $('agregar').addEventListener('click', addTask);
