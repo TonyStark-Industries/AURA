@@ -104,6 +104,19 @@ h1{text-shadow:0 0 14px rgba(57,255,20,.45)}
 .ghost:hover,.icon-btn:hover{background:var(--done)}
 .add button{box-shadow:0 0 10px rgba(57,255,20,.45)}
 .gate,.reto{border-color:var(--accent)}
+.hab{flex-basis:100%;display:flex;align-items:center;gap:8px;color:var(--muted);font-size:.9rem;cursor:pointer}
+.hab input{flex:none;min-width:0;width:18px;height:18px;padding:0;accent-color:var(--accent)}
+.hq{font:inherit;font-size:.72rem;padding:3px 9px;border:1px solid var(--line);border-radius:99px;background:transparent;color:var(--muted);cursor:pointer;flex:none}
+.hq:hover{border-color:var(--danger);color:var(--danger)}
+.fiesta{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;pointer-events:none;background:rgba(0,0,0,.6);animation:fiestaBg 2s ease forwards}
+.fiesta .box{position:relative;text-align:center;padding:22px 30px;margin:0 16px;border:2px solid var(--accent);border-radius:18px;background:var(--surface);box-shadow:0 0 40px rgba(57,255,20,.6);animation:pop 2s ease forwards}
+.fiesta h3{margin:0;font-size:clamp(1.8rem,7vw,2.8rem);color:var(--accent);text-shadow:0 0 16px rgba(57,255,20,.8)}
+.fiesta .box p{margin:6px 0 0;color:var(--ink)}
+.fiesta .p{position:absolute;top:50%;left:50%;width:9px;height:9px;border-radius:2px;animation:burst 1.5s ease-out forwards}
+@keyframes fiestaBg{0%{opacity:0}12%{opacity:1}85%{opacity:1}100%{opacity:0}}
+@keyframes pop{0%{transform:scale(.6);opacity:0}15%{transform:scale(1.08);opacity:1}25%{transform:scale(1)}85%{opacity:1}100%{opacity:0}}
+@keyframes burst{0%{transform:translate(0,0) rotate(0);opacity:1}100%{transform:translate(var(--dx),var(--dy)) rotate(360deg);opacity:0}}
+@media (prefers-reduced-motion:reduce){.fiesta .p{display:none}.fiesta .box{animation:none}}
 @media (prefers-reduced-motion:reduce){.bar b{transition:none}}
 </style>
 </head>
@@ -119,6 +132,7 @@ h1{text-shadow:0 0 14px rgba(57,255,20,.45)}
 
   <div class="grid">
     <section class="panel" aria-label="Calendario">
+      <div class="reto" id="habbar" hidden></div>
       <div class="cal-head">
         <button class="icon-btn" id="prev" aria-label="Mes anterior">‹</button>
         <h2 id="mes"></h2>
@@ -146,6 +160,7 @@ h1{text-shadow:0 0 14px rgba(57,255,20,.45)}
         <input id="nueva" type="text" maxlength="120" list="sug" placeholder="Agrega algo para este día" aria-label="Nueva tarea">
         <datalist id="sug"><option value="Ir al gym"><option value="Tomar 2 litros de agua"><option value="Dormir 8 horas"><option value="Caminar 30 minutos"><option value="Leer 10 minutos"><option value="Meditar"><option value="Estudiar 1 hora"><option value="Lavar trastes"><option value="Hacer la cama"></datalist>
         <button id="agregar">Agregar</button>
+        <label class="hab"><input type="checkbox" id="hab"> Modo hábito: repetir cada día hasta fin de mes</label>
       </div>
       <ul id="lista"></ul>
       <div class="foot">
@@ -163,8 +178,8 @@ h1{text-shadow:0 0 14px rgba(57,255,20,.45)}
   function save(){ try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {} }
 
   var KEY2 = 'pendientes-extra-v1';
-  var extra = { adult: false, racha: {} };
-  try { var r2 = localStorage.getItem(KEY2); if (r2) { var p2 = JSON.parse(r2); if (p2) { extra.adult = !!p2.adult; extra.racha = p2.racha || {}; } } } catch (e) {}
+  var extra = { adult: false, racha: {}, habitos: [] };
+  try { var r2 = localStorage.getItem(KEY2); if (r2) { var p2 = JSON.parse(r2); if (p2) { extra.adult = !!p2.adult; extra.racha = p2.racha || {}; extra.habitos = p2.habitos || []; } } } catch (e) {}
   function saveX(){ try { localStorage.setItem(KEY2, JSON.stringify(extra)); } catch (e) {} }
 
   var CATS = [
@@ -233,6 +248,67 @@ h1{text-shadow:0 0 14px rgba(57,255,20,.45)}
     box.appendChild(big); box.appendChild(p); box.appendChild(row);
   }
 
+  function celebrate(){
+    var old = document.querySelector('.fiesta'); if (old) old.remove();
+    var f = document.createElement('div'); f.className = 'fiesta'; f.setAttribute('role', 'status');
+    var colors = ['#39ff14', '#f5ff3b', '#ffffff', '#00e5ff'];
+    for (var i = 0; i < 30; i++){
+      var p = document.createElement('span'); p.className = 'p';
+      var a = Math.random() * Math.PI * 2, r = 120 + Math.random() * 220;
+      p.style.setProperty('--dx', Math.round(Math.cos(a) * r) + 'px');
+      p.style.setProperty('--dy', Math.round(Math.sin(a) * r) + 'px');
+      p.style.background = colors[i % colors.length];
+      p.style.animationDelay = (Math.random() * 0.2) + 's';
+      f.appendChild(p);
+    }
+    var box = document.createElement('div'); box.className = 'box';
+    var h = document.createElement('h3'); h.textContent = '¡Felicidades!';
+    var q = document.createElement('p'); q.textContent = 'Completaste todo el día.';
+    box.appendChild(h); box.appendChild(q); f.appendChild(box);
+    document.body.appendChild(f);
+    setTimeout(function(){ f.remove(); }, 2000);
+  }
+
+  function fillHabit(h, fromIso){
+    var d = parse(fromIso); var m = d.getMonth();
+    while (d.getMonth() === m){
+      var k = iso(d); var arr = (data[k] = data[k] || []);
+      if (!arr.some(function(x){ return x.h === h.id; })) arr.push({ id: h.id + k, t: h.t, d: false, c: h.c, h: h.id });
+      d.setDate(d.getDate() + 1);
+    }
+    h.m = fromIso.slice(0, 7);
+  }
+
+  var habOff = {};
+  function renderHabitos(){
+    var box = $('habbar');
+    var key = view.y + '-' + String(view.m + 1).padStart(2, '0');
+    var cur = todayIso.slice(0, 7);
+    var pend = (key >= cur && !habOff[key]) ? extra.habitos.filter(function(h){ return h.m < key; }) : [];
+    box.hidden = !pend.length;
+    if (!pend.length) return;
+    box.textContent = '';
+    var p = document.createElement('p');
+    p.textContent = 'Modo hábito: ¿repetir ' + pend.map(function(h){ return h.t; }).join(', ') + ' en ' + MESES[view.m] + '?';
+    var row = document.createElement('div'); row.className = 'row';
+    var si = document.createElement('button'); si.className = 'ghost on'; si.textContent = 'Sí, todo el mes';
+    si.addEventListener('click', function(){
+      var from = key === cur ? todayIso : key + '-01';
+      pend.forEach(function(h){ fillHabit(h, from); });
+      save(); saveX(); render();
+    });
+    var no = document.createElement('button'); no.className = 'ghost'; no.textContent = 'No, quitar hábito';
+    no.addEventListener('click', function(){
+      var ids = pend.map(function(h){ return h.id; });
+      extra.habitos = extra.habitos.filter(function(h){ return ids.indexOf(h.id) < 0; });
+      saveX(); render();
+    });
+    var later = document.createElement('button'); later.className = 'ghost'; later.textContent = 'Ahora no';
+    later.addEventListener('click', function(){ habOff[key] = true; renderHabitos(); });
+    row.appendChild(si); row.appendChild(no); row.appendChild(later);
+    box.appendChild(p); box.appendChild(row);
+  }
+
   function initExtra(){
     
   }
@@ -257,6 +333,7 @@ h1{text-shadow:0 0 14px rgba(57,255,20,.45)}
 
   function renderCal(){
     $('mes').textContent = MESES[view.m] + ' ' + view.y;
+    renderHabitos();
     var box = $('dias'); box.textContent = '';
     var first = new Date(view.y, view.m, 1);
     var offset = (first.getDay() + 6) % 7;
@@ -303,18 +380,33 @@ h1{text-shadow:0 0 14px rgba(57,255,20,.45)}
       var li = document.createElement('li'); if (t.d) li.className = 'done';
       var lab = document.createElement('label');
       var cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = !!t.d;
-      cb.addEventListener('change', function(){ t.d = cb.checked; save(); render(); });
+      cb.addEventListener('change', function(){
+        var b4 = stats(sel); t.d = cb.checked; save(); render();
+        var af = stats(sel);
+        if (af.total && af.done === af.total && !(b4.total && b4.done === b4.total)) celebrate();
+      });
       var sp = document.createElement('span'); sp.textContent = t.t;
       lab.appendChild(cb); lab.appendChild(sp);
       var cc = catOf(t); var tg = document.createElement('em'); tg.className = 'tag';
-      tg.appendChild(dot(cc.c)); tg.appendChild(document.createTextNode(cc.n)); lab.appendChild(tg);
+      tg.appendChild(dot(cc.c)); tg.appendChild(document.createTextNode(cc.n + (t.h ? ' ↻' : ''))); lab.appendChild(tg);
       var del = document.createElement('button'); del.className = 'del'; del.textContent = '✕'; del.setAttribute('aria-label', 'Eliminar: ' + t.t);
       del.addEventListener('click', function(){
         data[sel] = (data[sel] || []).filter(function(x){ return x.id !== t.id; });
         if (!data[sel].length) delete data[sel];
         save(); render();
       });
-      li.appendChild(lab); li.appendChild(del);
+      if (t.h){
+        var hq = document.createElement('button'); hq.className = 'hq'; hq.textContent = 'Quitar hábito';
+        hq.setAttribute('aria-label', 'Quitar hábito: ' + t.t);
+        hq.addEventListener('click', function(){
+          extra.habitos = extra.habitos.filter(function(h){ return h.id !== t.h; });
+          Object.keys(data).forEach(function(k){
+            if (k >= sel){ data[k] = (data[k] || []).filter(function(x){ return x.h !== t.h; }); if (!data[k].length) delete data[k]; }
+          });
+          saveX(); save(); render();
+        });
+        li.appendChild(lab); li.appendChild(hq); li.appendChild(del);
+      } else { li.appendChild(lab); li.appendChild(del); }
       ul.appendChild(li);
     });
     $('limpiar').style.display = s.done ? '' : 'none';
@@ -332,7 +424,15 @@ h1{text-shadow:0 0 14px rgba(57,255,20,.45)}
   function addTask(){
     var inp = $('nueva'); var v = inp.value.trim();
     if (!v) { inp.focus(); return; }
-    (data[sel] = data[sel] || []).push({ id: Date.now() + Math.random().toString(36).slice(2,6), t: v, d: false, c: $('cat').value || 'personal' });
+    var cat = $('cat').value || 'personal';
+    if ($('hab').checked){
+      var nh = { id: 'h' + Date.now().toString(36), t: v, c: cat, m: sel.slice(0, 7) };
+      extra.habitos.push(nh);
+      fillHabit(nh, sel);
+      saveX(); $('hab').checked = false;
+    } else {
+      (data[sel] = data[sel] || []).push({ id: Date.now() + Math.random().toString(36).slice(2,6), t: v, d: false, c: cat });
+    }
     inp.value = ''; save(); render(); inp.focus();
   }
 
